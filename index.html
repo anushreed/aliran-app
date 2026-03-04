@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#0B1628"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Aliran"/>
+<title>Aliran</title>
+<link rel="manifest" href="manifest.json"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#06111E;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#F1F5F9;overscroll-behavior:none}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit;outline:none}
+::-webkit-scrollbar{display:none}
+
+/* Layout */
+#app{display:flex;justify-content:center;min-height:100vh;background:#06111E}
+#shell{width:100%;max-width:430px;min-height:100vh;background:#0B1628;display:flex;flex-direction:column;position:relative}
+#safe-top{height:env(safe-area-inset-top,20px);background:#0B1628}
+#screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#nav{background:#0d1e35;border-top:1px solid #1e2d4a;display:flex;justify-content:space-around;align-items:center;padding:10px 0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+
+/* Nav buttons */
+.nav-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 10px}
+.nav-btn span.icon{font-size:20px}
+.nav-btn span.label{font-size:10px;color:#475569;font-weight:400}
+.nav-btn.active span.label{color:#3B82F6;font-weight:700}
+.fab-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.fab{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;font-size:28px;line-height:1;color:#fff;margin-top:-24px;box-shadow:0 4px 20px rgba(59,130,246,.5);display:flex;align-items:center;justify-content:center}
+.fab-label{font-size:10px;color:#475569}
+.fab-label.active{color:#3B82F6}
+
+/* Screens */
+.screen{padding:20px 20px 24px;display:none}
+.screen.active{display:block}
+
+/* Typography */
+.sub{color:#64748B;font-size:12px;margin-bottom:2px}
+.title{color:#F1F5F9;font-size:20px;font-weight:700}
+.section-title{color:#F1F5F9;font-size:15px;font-weight:700}
+.muted{color:#64748B;font-size:13px}
+
+/* Cards */
+.card{background:#1e2d4a;border-radius:16px;padding:18px}
+.card+.card{margin-top:12px}
+.dark-card{background:#0d1e35;border:1px solid #1e2d4a;border-radius:16px;padding:16px}
+
+/* Alert */
+#dose-alert{background:#F59E0B22;border:1px solid #F59E0B55;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10;margin-bottom:16px}
+#dose-alert.hidden{display:none}
+#dose-alert p{color:#FCD34D;font-size:12px;flex:1}
+#dose-alert button{background:none;border:none;color:#64748B;font-size:18px;line-height:1}
+
+/* Time toggle */
+.toggle-row{display:flex;gap:8px;margin-bottom:16px}
+.time-btn{padding:6px 18px;border-radius:20px;border:none;font-size:13px;font-weight:600;background:#1e2d4a;color:#64748B}
+.time-btn.active-day{background:#3B82F6;color:#fff}
+.time-btn.active-week{background:#F59E0B;color:#fff}
+
+/* Chart */
+#chart-wrap{background:#0d1e35;margin:0;border-radius:16px;padding:16px 8px 8px;border:1px solid #1e2d4a;margin-bottom:20px}
+.chart-legend{display:flex;gap:20px;padding-left:8px;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#94A3B8}
+.legend-dot{width:20px;height:3px;border-radius:2px}
+#main-chart{width:100%;height:180px;display:block}
+.chart-stats{display:flex;justify-content:space-between;padding:8px 16px 0;border-top:1px solid #1e2d4a;margin-top:4px}
+.stat-item{text-align:center}
+.stat-label{color:#64748B;font-size:10px}
+.stat-value{font-weight:700;font-size:15px}
+
+/* Log list */
+.log-item{background:#1e2d4a;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.log-icon{border-radius:10px;padding:8px;font-size:18px}
+.log-info{flex:1}
+.log-name{color:#F1F5F9;font-size:13px;font-weight:600}
+.log-meta{color:#64748B;font-size:11px;margin-top:2px}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+
+/* Log screen grid */
+.log-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.log-type-btn{border-radius:14px;padding:16px 14px;text-align:left;border:2px solid transparent;background:#1e2d4a}
+.log-type-btn.selected{border-color:var(--c)}
+.log-type-btn .t-icon{font-size:22px}
+.log-type-btn .t-label{color:#F1F5F9;font-weight:700;font-size:14px;margin-top:8px}
+.log-type-btn .t-desc{color:#64748B;font-size:11px}
+
+/* Form */
+#log-form{background:#1e2d4a;border-radius:16px;padding:20px;margin-bottom:16px;display:none}
+.form-label{color:#94A3B8;font-size:12px;display:block;margin-bottom:6px}
+.form-input{width:100%;background:#0B1628;border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#F1F5F9;font-size:14px}
+.form-group{margin-bottom:12px}
+.save-btn{margin-top:16px;width:100%;padding:12px;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;border-radius:12px;color:#fff;font-weight:700;font-size:14px}
+.success-item{background:#10B98122;border:1px solid #10B98144;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#10B981;font-size:13px;font-weight:600}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
+.stat-card{background:#1e2d4a;border-radius:12px;padding:12px 10px;text-align:center}
+.stat-big{font-weight:800;font-size:20px}
+.stat-unit{font-size:11px;font-weight:400}
+.stat-small{color:#64748B;font-size:10px;margin-top:4px}
+
+/* Dots */
+.dots{display:flex;gap:4px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%}
+
+/* Insights */
+.insight-card{background:#1e2d4a;border-radius:16px;padding:18px;margin-bottom:12px;border-left:4px solid var(--c)}
+.insight-inner{display:flex;gap:10px}
+.insight-emoji{font-size:24px;flex-shrink:0}
+.insight-title{color:#F1F5F9;font-weight:700;font-size:14px;margin-bottom:6px}
+.insight-body{color:#94A3B8;font-size:13px;line-height:1.5}
+.insight-btn{margin-top:10px;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;border:1px solid var(--c);background:transparent;color:var(--c)}
+
+/* Settings */
+.profile-card{background:#1e2d4a;border-radius:16px;padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#F59E0B);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.setting-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.setting-label{color:#F1F5F9;font-size:13px}
+.toggle{width:42px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+.toggle-knob{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s}
+.privacy-row{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid #334155}
+.privacy-row:last-child{border:none;padding:0;margin:0}
+.section-header{color:#94A3B8;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:14px}
+.export-btn{width:100%;padding:14px;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;border-radius:14px;color:#fff;font-weight:700;font-size:14px;margin-top:12px}
+
+/* Install banner */
+#install-hint{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#1e2d4a;border:1px solid #3B82F6;border-radius:16px;padding:12px 20px;font-size:13px;color:#F1F5F9;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:100;display:none}
+
+/* Weight chart canvas */
+#weight-chart{width:100%;height:140px;display:block}
+
+/* See all link */
+.see-all{background:none;border:none;color:#3B82F6;font-size:12px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="shell">
+  <div id="safe-top"></div>
+
+  <div id="screen">
+
+    <!-- HOME -->
+    <div id="tab-home" class="screen active" style="padding-top:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 20px 12px">
+        <div>
+          <p class="sub">Good morning 👋</p>
+          <h2 class="title">Your Dashboard</h2>
+        </div>
+        <div style="position:relative">
+          <div style="background:#1e2d4a;border-radius:12px;padding:10px;font-size:18px">🔔</div>
+          <div style="position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:#F59E0B;border-radius:50%;border:2px solid #0B1628"></div>
+        </div>
+      </div>
+
+      <div style="padding:0 20px">
+        <div id="dose-alert">
+          <span style="font-size:16px">⚠️</span>
+          <p>Next dose due at 20:30 · 1.2mg</p>
+          <button onclick="this.closest('#dose-alert').classList.add('hidden')">✕</button>
+        </div>
+
+        <div class="toggle-row">
+          <button class="time-btn active-day" onclick="setView('Day',this)">Day</button>
+          <button class="time-btn" onclick="setView('Week',this)">Week</button>
+          <button class="time-btn" onclick="setView('Month',this)">Month</button>
+        </div>
+      </div>
+
+      <div id="chart-wrap" style="margin:0 20px 20px">
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Glucose</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Medication</div>
+        </div>
+        <canvas id="main-chart"></canvas>
+        <div class="chart-stats">
+          <div class="stat-item"><div class="stat-label">Current</div><div class="stat-value" style="color:#3B82F6">112 <span style="font-size:11px;font-weight:400">mg/dL</span></div></div>
+          <div class="stat-item"><div class="stat-label">Time in Range</div><div class="stat-value" style="color:#10B981">73<span style="font-size:11px;font-weight:400">%</span></div></div>
+          <div class="stat-item"><div class="stat-label">Next Dose</div><div class="stat-value" style="color:#F59E0B">20:30</div></div>
+        </div>
+      </div>
+
+      <div style="padding:0 20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span class="section-title">Recent Logs</span>
+          <button class="see-all" onclick="switchTab('log')">See all</button>
+        </div>
+        <div id="recent-logs"></div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div id="tab-log" class="screen">
+      <p class="sub" style="margin-bottom:2px">Track your health events</p>
+      <h2 class="title" style="margin-bottom:20px">Log Entry</h2>
+      <div class="log-grid" id="log-type-grid"></div>
+      <div id="log-form">
+        <h3 style="color:#F1F5F9;font-size:15px;font-weight:700;margin-bottom:16px" id="form-title">Details</h3>
+        <div id="form-fields"></div>
+        <button class="save-btn" onclick="saveLog()">Save Entry ✓</button>
+      </div>
+      <div id="log-success-list"></div>
+    </div>
+
+    <!-- TRENDS -->
+    <div id="tab-trends" class="screen">
+      <p class="sub">Your progress over time</p>
+      <h2 class="title" style="margin-bottom:20px">Trends</h2>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-big" style="color:#3B82F6">118<span class="stat-unit">mg/dL</span></div><div class="stat-small">Avg Glucose</div></div>
+        <div class="stat-card"><div class="stat-big" style="color:#10B981">3.3<span class="stat-unit">kg</span></div><div class="stat-small">Weight Lost</div></div>
+        <div class="stat-card"><div class="stat-big" style="color:#F59E0B">91<span class="stat-unit">%</span></div><div class="stat-small">Doses on Time</div></div>
+      </div>
+      <div class="dark-card" style="margin-bottom:12px">
+        <p style="color:#94A3B8;font-size:13px;font-weight:600;margin-bottom:10px">Weight Progress (6 weeks)</p>
+        <canvas id="weight-chart"></canvas>
+      </div>
+      <div class="card">
+        <p class="section-header">SIDE EFFECT HISTORY</p>
+        <div id="side-effects-list"></div>
+      </div>
+      <button class="export-btn">📤 Export Report (CSV / PDF)</button>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div id="tab-insights" class="screen">
+      <p class="sub">Personalised daily suggestions</p>
+      <h2 class="title" style="margin-bottom:20px">Insights</h2>
+      <div id="insights-list"></div>
+      <div class="dark-card" style="margin-top:4px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:16px">⏰</span>
+          <span style="color:#F59E0B;font-weight:700;font-size:14px">Upcoming nudge</span>
+        </div>
+        <p style="color:#94A3B8;font-size:13px;line-height:1.5">You typically feel nauseous 2 hours after your evening dose. Consider a light snack at 22:00 to ease symptoms.</p>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="screen">
+      <h2 class="title" style="margin-bottom:20px">Settings</h2>
+      <div class="profile-card">
+        <div class="avatar">👤</div>
+        <div>
+          <p style="color:#F1F5F9;font-weight:700;font-size:15px">Aliran User</p>
+          <p style="color:#64748B;font-size:12px">GLP-1 therapy · Week 6</p>
+          <p style="color:#3B82F6;font-size:12px;margin-top:2px">Premium Plan ✦</p>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <p class="section-header">NOTIFICATIONS</p>
+        <div id="notif-toggles"></div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <p class="section-header">TARGETS</p>
+        <div id="targets-list"></div>
+      </div>
+      <div class="card">
+        <p class="section-header">DATA & PRIVACY</p>
+        <div id="privacy-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+
+  <div id="nav">
+    <button class="nav-btn active" onclick="switchTab('home')" data-tab="home">
+      <span class="icon">🏠</span><span class="label">Home</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('trends')" data-tab="trends">
+      <span class="icon">📈</span><span class="label">Trends</span>
+    </button>
+    <div class="fab-wrap">
+      <button class="fab" onclick="switchTab('log')">＋</button>
+      <span class="fab-label" id="fab-label">Log</span>
+    </div>
+    <button class="nav-btn" onclick="switchTab('insights')" data-tab="insights">
+      <span class="icon">💡</span><span class="label">Insights</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('settings')" data-tab="settings">
+      <span class="icon">⚙️</span><span class="label">Settings</span>
+    </button>
+  </div>
+</div>
+</div>
+<div id="install-hint">📲 Tap Share → "Add to Home Screen" to install Aliran</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const glucosePoints = [94,88,102,118,130,122,140,128,136,124,115,108,119,112,98];
+const medPoints =     [0, 0, 0.8,0.6,0.4,0.2,0,  0,  0,  0,  0,  0,  0,  0,  0];
+const timeLabels = ["6am","7am","8am","9am","10am","11am","12pm","1pm","2pm","3pm","4pm","5pm","6pm","7pm","8pm"];
+const weightPoints = [87.5,86.8,86.1,85.3,84.9,84.2];
+
+const recentLogs = [
+  {label:"GLP-1 Injection",value:"1.2mg",time:"08:30",status:"on-time",color:"#3B82F6",emoji:"💉"},
+  {label:"Breakfast",value:"420 kcal",time:"09:15",status:"logged",color:"#F59E0B",emoji:"🍽️"},
+  {label:"Glucose Reading",value:"118 mg/dL",time:"09:00",status:"normal",color:"#10B981",emoji:"📊"},
+  {label:"Weight",value:"84.2 kg",time:"07:00",status:"logged",color:"#8B5CF6",emoji:"⚖️"},
+];
+
+const logTypes = [
+  {id:"injection",label:"Injection",emoji:"💉",color:"#3B82F6",desc:"Log GLP-1 dose"},
+  {id:"glucose",label:"Glucose",emoji:"📊",color:"#10B981",desc:"Manual reading"},
+  {id:"food",label:"Food",emoji:"🍽️",color:"#F59E0B",desc:"Meal & macros"},
+  {id:"weight",label:"Weight",emoji:"⚖️",color:"#8B5CF6",desc:"Body weight"},
+  {id:"symptom",label:"Symptom",emoji:"🤢",color:"#EF4444",desc:"Side effects"},
+];
+
+const insights = [
+  {emoji:"📈",title:"Glucose spike detected",body:"Your glucose rose 30% after breakfast. Try adding more protein next time.",color:"#F59E0B"},
+  {emoji:"💉",title:"Injection on schedule",body:"Great job — you've logged your dose on time 6 days in a row!",color:"#10B981"},
+  {emoji:"🥗",title:"Macro tip",body:"Higher fibre intake yesterday correlated with a smoother glucose curve.",color:"#3B82F6"},
+];
+
+const sideEffects = [
+  {label:"Nausea",intensity:2,date:"Yesterday"},
+  {label:"Fatigue",intensity:1,date:"2 days ago"},
+  {label:"Constipation",intensity:3,date:"3 days ago"},
+];
+
+const notifSettings = [
+  {key:"dose",label:"💉 Dose reminders",on:true},
+  {key:"log",label:"📝 Log prompts",on:true},
+  {key:"weight",label:"⚖️ Weight check-in",on:false},
+  {key:"insights",label:"💡 Daily insights",on:true},
+];
+
+const targets = [
+  {label:"Glucose target",value:"70–140 mg/dL"},
+  {label:"Weight goal",value:"80 kg"},
+  {label:"Weekly dose",value:"1.2 mg"},
+];
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+let currentTab = "home";
+
+function switchTab(tab) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  const btn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+  if (btn) btn.classList.add("active");
+  const fabLabel = document.getElementById("fab-label");
+  fabLabel.className = tab === "log" ? "fab-label active" : "fab-label";
+  currentTab = tab;
+  if (tab === "trends") { setTimeout(drawWeightChart, 50); }
+}
+
+// ── Time toggle ───────────────────────────────────────────────────────────────
+function setView(v, el) {
+  document.querySelectorAll(".time-btn").forEach(b => b.className = "time-btn");
+  el.className = "time-btn active-" + v.toLowerCase();
+  drawMainChart();
+}
+
+// ── Canvas Charts ─────────────────────────────────────────────────────────────
+function drawMainChart() {
+  const canvas = document.getElementById("main-chart");
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth; const H = 180;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.height = H + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const pad = {l:36, r:12, t:10, b:24};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const minG = 60, maxG = 160;
+
+  function xPos(i) { return pad.l + (i / (glucosePoints.length - 1)) * cw; }
+  function yPos(v) { return pad.t + (1 - (v - minG) / (maxG - minG)) * ch; }
+
+  // Grid
+  ctx.strokeStyle = "#1e2d4a"; ctx.lineWidth = 1;
+  [70,100,130,160].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(pad.l, yPos(v)); ctx.lineTo(pad.l + cw, yPos(v)); ctx.stroke();
+  });
+
+  // Reference lines
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle = "#EF444466"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, yPos(140)); ctx.lineTo(pad.l + cw, yPos(140)); ctx.stroke();
+  ctx.strokeStyle = "#F59E0B44";
+  ctx.beginPath(); ctx.moveTo(pad.l, yPos(70)); ctx.lineTo(pad.l + cw, yPos(70)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Medication area fill
+  ctx.beginPath();
+  ctx.moveTo(xPos(0), yPos(minG));
+  medPoints.forEach((m, i) => ctx.lineTo(xPos(i), yPos(minG + m * 80)));
+  ctx.lineTo(xPos(medPoints.length - 1), yPos(minG));
+  ctx.closePath();
+  ctx.fillStyle = "rgba(245,158,11,0.12)"; ctx.fill();
+
+  // Medication dashed line
+  ctx.beginPath(); ctx.setLineDash([6,3]); ctx.strokeStyle = "#F59E0B"; ctx.lineWidth = 2.5;
+  medPoints.forEach((m, i) => i === 0 ? ctx.moveTo(xPos(i), yPos(minG + m * 80)) : ctx.lineTo(xPos(i), yPos(minG + m * 80)));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Glucose fill
+  ctx.beginPath();
+  ctx.moveTo(xPos(0), yPos(glucosePoints[0]));
+  glucosePoints.forEach((g, i) => i > 0 && ctx.lineTo(xPos(i), yPos(g)));
+  ctx.lineTo(xPos(glucosePoints.length-1), yPos(minG)); ctx.lineTo(xPos(0), yPos(minG));
+  ctx.closePath();
+  ctx.fillStyle = "rgba(59,130,246,0.12)"; ctx.fill();
+
+  // Glucose line
+  ctx.beginPath(); ctx.strokeStyle = "#3B82F6"; ctx.lineWidth = 2.5;
+  glucosePoints.forEach((g, i) => i === 0 ? ctx.moveTo(xPos(i), yPos(g)) : ctx.lineTo(xPos(i), yPos(g)));
+  ctx.stroke();
+
+  // Dots on glucose
+  glucosePoints.forEach((g, i) => {
+    ctx.beginPath(); ctx.arc(xPos(i), yPos(g), 3, 0, Math.PI*2);
+    ctx.fillStyle = "#3B82F6"; ctx.fill();
+  });
+
+  // Y-axis labels
+  ctx.fillStyle = "#475569"; ctx.font = "10px -apple-system,sans-serif"; ctx.textAlign = "right";
+  [70,100,130].forEach(v => ctx.fillText(v, pad.l - 4, yPos(v) + 4));
+
+  // X-axis labels
+  ctx.textAlign = "center";
+  [0, 3, 6, 9, 12, 14].forEach(i => ctx.fillText(timeLabels[i], xPos(i), H - 6));
+}
+
+function drawWeightChart() {
+  const canvas = document.getElementById("weight-chart");
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth; const H = 140;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.height = H + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const pad = {l:38, r:12, t:10, b:24};
+  const cw = W - pad.l - pad.r; const ch = H - pad.t - pad.b;
+  const minW = 83; const maxW = 89;
+  const labels = ["W1","W2","W3","W4","W5","W6"];
+
+  function xPos(i) { return pad.l + (i / (weightPoints.length - 1)) * cw; }
+  function yPos(v) { return pad.t + (1 - (v - minW) / (maxW - minW)) * ch; }
+
+  // Grid
+  ctx.strokeStyle = "#1e2d4a"; ctx.lineWidth = 1;
+  [84,86,88].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(pad.l, yPos(v)); ctx.lineTo(pad.l+cw, yPos(v)); ctx.stroke();
+  });
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(xPos(0), yPos(weightPoints[0]));
+  weightPoints.forEach((w,i) => i>0 && ctx.lineTo(xPos(i), yPos(w)));
+  ctx.lineTo(xPos(weightPoints.length-1), yPos(minW)); ctx.lineTo(xPos(0), yPos(minW));
+  ctx.closePath(); ctx.fillStyle = "rgba(139,92,246,0.15)"; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle = "#8B5CF6"; ctx.lineWidth = 2.5;
+  weightPoints.forEach((w,i) => i===0 ? ctx.moveTo(xPos(i),yPos(w)) : ctx.lineTo(xPos(i),yPos(w)));
+  ctx.stroke();
+
+  // Dots
+  weightPoints.forEach((w,i) => {
+    ctx.beginPath(); ctx.arc(xPos(i), yPos(w), 4, 0, Math.PI*2);
+    ctx.fillStyle="#8B5CF6"; ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle="#475569"; ctx.font="10px -apple-system,sans-serif"; ctx.textAlign="right";
+  [84,86,88].forEach(v => ctx.fillText(v, pad.l-4, yPos(v)+4));
+  ctx.textAlign="center";
+  labels.forEach((l,i) => ctx.fillText(l, xPos(i), H-6));
+}
+
+// ── DOM Builders ──────────────────────────────────────────────────────────────
+function buildRecentLogs() {
+  const el = document.getElementById("recent-logs");
+  el.innerHTML = recentLogs.map(l => `
+    <div class="log-item">
+      <div class="log-icon" style="background:${l.color}22">${l.emoji}</div>
+      <div class="log-info">
+        <div class="log-name">${l.label}</div>
+        <div class="log-meta">${l.value} · ${l.time}</div>
+      </div>
+      ${badge(l.status)}
+    </div>
+  `).join("");
+}
+
+function badge(status) {
+  const m = {"on-time":["#10B981","On time"],"logged":["#3B82F6","Logged"],"normal":["#10B981","Normal"],"late":["#F59E0B","Late"],"missed":["#EF4444","Missed"]};
+  const [c,l] = m[status]||["#64748B",status];
+  return `<span class="badge" style="background:${c}22;color:${c}">${l}</span>`;
+}
+
+function buildLogTypes() {
+  const grid = document.getElementById("log-type-grid");
+  grid.innerHTML = logTypes.map(t => `
+    <button class="log-type-btn" style="--c:${t.color}" onclick="selectLogType('${t.id}')">
+      <div class="t-icon">${t.emoji}</div>
+      <div class="t-label">${t.label}</div>
+      <div class="t-desc">${t.desc}</div>
+    </button>
+  `).join("");
+}
+
+let activeLogType = null;
+
+function selectLogType(id) {
+  activeLogType = id;
+  document.querySelectorAll(".log-type-btn").forEach(b => b.classList.remove("selected"));
+  const t = logTypes.find(x => x.id === id);
+  event.currentTarget.classList.add("selected");
+  document.getElementById("form-title").textContent = t.label + " Details";
+  document.getElementById("log-form").style.display = "block";
+  const fields = document.getElementById("form-fields");
+
+  if (id === "injection") {
+    fields.innerHTML = `
+      <div class="form-group"><label class="form-label">Dose (mg)</label><input class="form-input" id="f-dose" value="1.2"/></div>
+      <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="f-time" value="08:30"/></div>`;
+  } else if (id === "glucose") {
+    fields.innerHTML = `<div class="form-group"><label class="form-label">Reading (mg/dL)</label><input class="form-input" id="f-glucose" placeholder="e.g. 112"/></div>`;
+  } else if (id === "food") {
+    fields.innerHTML = `<div class="form-group"><label class="form-label">Meal description</label><input class="form-input" id="f-food" placeholder="e.g. Oats with banana"/></div>`;
+  } else if (id === "weight") {
+    fields.innerHTML = `<div class="form-group"><label class="form-label">Weight (kg)</label><input class="form-input" id="f-weight" placeholder="e.g. 84.2"/></div>`;
+  } else if (id === "symptom") {
+    fields.innerHTML = ["Nausea","Fatigue","Constipation","Headache"].map(s => `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="color:#94A3B8;font-size:13px">${s}</span>
+        ${dots(2)}
+      </div>`).join("");
+  }
+}
+
+function dots(value, max=5) {
+  let d = '<div class="dots">';
+  for(let i=0;i<max;i++){
+    const c = i<value?(value>=4?"#EF4444":value>=3?"#F59E0B":"#3B82F6"):"#334155";
+    d+=`<div class="dot" style="background:${c}"></div>`;
+  }
+  return d + '</div>';
+}
+
+function saveLog() {
+  if (!activeLogType) return;
+  const t = logTypes.find(x => x.id === activeLogType);
+  const time = new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const list = document.getElementById("log-success-list");
+  list.innerHTML = `<div class="success-item">✅ ${t.label} logged at ${time}</div>` + list.innerHTML;
+  document.getElementById("log-form").style.display = "none";
+  document.querySelectorAll(".log-type-btn").forEach(b => b.classList.remove("selected"));
+  activeLogType = null;
+}
+
+function buildSideEffects() {
+  document.getElementById("side-effects-list").innerHTML = sideEffects.map(se => `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="color:#F1F5F9;font-size:13px">${se.label}</div>
+        <div style="color:#64748B;font-size:11px">${se.date}</div>
+      </div>
+      ${dots(se.intensity)}
+    </div>`).join("");
+}
+
+function buildInsights() {
+  document.getElementById("insights-list").innerHTML = insights.map((ins,i) => `
+    <div class="insight-card" style="--c:${ins.color}" id="insight-${i}">
+      <div class="insight-inner">
+        <div class="insight-emoji">${ins.emoji}</div>
+        <div style="flex:1">
+          <div class="insight-title">${ins.title}</div>
+          <div class="insight-body">${ins.body}</div>
+          <button class="insight-btn" style="--c:${ins.color}" onclick="dismissInsight(${i})">Got it →</button>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function dismissInsight(i) {
+  const el = document.getElementById("insight-"+i);
+  if (el) { el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(()=>el.remove(),300); }
+}
+
+function buildSettings() {
+  document.getElementById("notif-toggles").innerHTML = notifSettings.map((n,i) => `
+    <div class="setting-row">
+      <span class="setting-label">${n.label}</span>
+      <button class="toggle" id="tog-${i}" style="background:${n.on?'#3B82F6':'#334155'}" onclick="toggleNotif(${i})">
+        <div class="toggle-knob" style="left:${n.on?'21px':'3px'}"></div>
+      </button>
+    </div>`).join("");
+
+  document.getElementById("targets-list").innerHTML = targets.map(t => `
+    <div class="setting-row" style="margin-bottom:12px">
+      <span style="color:#F1F5F9;font-size:13px">${t.label}</span>
+      <span style="color:#3B82F6;font-size:13px;font-weight:600">${t.value}</span>
+    </div>`).join("");
+
+  document.getElementById("privacy-list").innerHTML = ["Manage data sharing","Export my data","Delete account"].map((item,i) => `
+    <div class="privacy-row" style="${i===2?'border:none;padding:0;margin:0':''}">
+      <span style="color:${i===2?'#EF4444':'#F1F5F9'};font-size:13px">${item}</span>
+      <span style="color:#64748B">›</span>
+    </div>`).join("");
+}
+
+function toggleNotif(i) {
+  notifSettings[i].on = !notifSettings[i].on;
+  const btn = document.getElementById("tog-"+i);
+  btn.style.background = notifSettings[i].on ? "#3B82F6" : "#334155";
+  btn.querySelector(".toggle-knob").style.left = notifSettings[i].on ? "21px" : "3px";
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  buildRecentLogs();
+  buildLogTypes();
+  buildSideEffects();
+  buildInsights();
+  buildSettings();
+  drawMainChart();
+
+  // PWA service worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+
+  // iOS install hint
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+  if (isIOS && !isStandalone) {
+    setTimeout(() => {
+      const h = document.getElementById("install-hint");
+      h.style.display = "block";
+      setTimeout(() => h.style.display = "none", 6000);
+    }, 3000);
+  }
+});
+
+window.addEventListener("resize", () => {
+  drawMainChart();
+  if (currentTab === "trends") drawWeightChart();
+});
+</script>
+</body>
+</html>
